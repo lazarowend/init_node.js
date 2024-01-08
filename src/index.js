@@ -72,6 +72,11 @@ app.post("/deposit", verifyIfExistsAccountCPF, (request, response) => {
     return response.status(201).send()
 })
 
+app.get("/account", verifyIfExistsAccountCPF, (request, response) => {
+    const { customer } = request;
+
+    return response.json(customer)
+})
 
 app.listen(7000);
 
