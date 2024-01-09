@@ -20,6 +20,17 @@ function verifyIfExistsAccountCPF(request, response, next) {
     return next();
 }
 
+function getBalance(statement) {
+    return statement.reduce((acc, operation) => {
+        if (operation.type === 'credit') {
+            return acc + operation.amount;
+        } else {
+            return acc - operation.amount;
+        }
+    }, 0);
+}
+
+
 app.post("/account", (request, response) => {
     const { cpf, name } = request.body;
 
@@ -56,6 +67,26 @@ app.get("/statement/date", verifyIfExistsAccountCPF, (request, response) => {
     return response.json(statement)
 })
 
+app.post("/withdraw", verifyIfExistsAccountCPF, (request, response) => {
+    const { amount } = request.body;
+    const { customer } = request;
+
+    const balance = getBalance(customer.statement);
+
+    if (balance < amount) {
+        return response.status(400).json({ error: "Insufficient funds!" })
+    }
+    const statementOperation = {
+        amount,
+        created_at: new Date(),
+        type: "debit"
+    }
+
+    customer.statement.push(statementOperation)
+
+    return response.status(201).send()
+})
+
 app.post("/deposit", verifyIfExistsAccountCPF, (request, response) => {
     const { descripition, amount } = request.body;
     const { customer } = request;
@@ -64,7 +95,7 @@ app.post("/deposit", verifyIfExistsAccountCPF, (request, response) => {
         descripition,
         amount,
         created_at: new Date(),
-        type: "Credit"
+        type: "credit"
     }
 
     customer.statement.push(statementOperation)
@@ -88,6 +119,14 @@ app.put("/account", verifyIfExistsAccountCPF, (request, response) => {
 
 })
 
+app.delete("/account", verifyIfExistsAccountCPF, (request, response) => {
+    const { customer } = request;
+
+    customers.splice(customer, 1);
+
+    return response.status(200).send(customers)
+
+})
 
 app.listen(7000);
 
